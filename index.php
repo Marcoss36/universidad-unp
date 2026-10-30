@@ -1,3 +1,28 @@
+<?php
+include 'conexion.php';
+
+$mensaje_exito = "";
+
+// C - INSERTAR ASPIRANTE DESDE EL PORTAL
+if (isset($_POST['registrar_aspirante'])) {
+    $nombre = $_POST['nombre'];
+    $correo = $_POST['correo'];
+    $carrera = $_POST['carrera'];
+    $folio = 'UNP-2026-' . rand(1000, 9999);
+    $curp = 'PENDIENTE'; // Valor por defecto o puedes agregarlo al formulario si lo deseas
+
+    $stmt = $conexion->prepare("INSERT INTO aspirantes (folio, nombre, correo, curp, carrera) VALUES (?, ?, ?, ?, ?)");
+    if ($stmt) {
+        $stmt->bind_param("sssss", $folio, $nombre, $correo, $curp, $carrera);
+        if ($stmt->execute()) {
+            $mensaje_exito = "¡Registro exitoso! Tu folio asignado es: " . $folio;
+        } else {
+            $mensaje_exito = "Error al registrar en la base de datos.";
+        }
+        $stmt->close();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="es" class="h-full bg-slate-50">
 <head>
@@ -44,6 +69,12 @@
 </head>
 <body class="h-full flex flex-col font-sans text-slate-800 bg-slate-50 antialiased selection:bg-unp-burgundy selection:text-white">
 
+    <?php if (!empty($mensaje_exito)): ?>
+    <div class="bg-emerald-600 text-white text-center py-3 px-4 font-bold text-sm z-50">
+        <?= $mensaje_exito ?>
+    </div>
+    <?php endif; ?>
+
     <!-- TOP BAR DE INFORMACIÓN INSTITUCIONAL -->
     <div class="bg-unp-navy text-slate-200 text-xs py-2 px-4 border-b border-slate-700">
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
@@ -64,7 +95,7 @@
     </div>
 
     <!-- NAVEGACIÓN PRINCIPAL CON MENÚS DESPLEGABLES INDEPENDIENTES -->
-    <header class="bg-white shadow-md sticky top-0 z-50 border-b border-slate-200">
+    <header class="bg-white shadow-md sticky top-0 z-40 border-b border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20">
                 <!-- Logo Oficial UNP Vectorial -->
@@ -108,12 +139,10 @@
 
                 <!-- Menú Desktop con Dropdowns Separados -->
                 <nav class="hidden lg:flex items-center space-x-1">
-                    <!-- Nav Inicio -->
                     <button onclick="navigateTo('mision-vision')" id="nav-mision-vision" class="nav-btn px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition text-sm">
                         <i class="fa-solid fa-house mr-1 text-unp-burgundy"></i> Inicio
                     </button>
 
-                    <!-- DROPDOWN 1: PROGRAMAS ACADÉMICOS -->
                     <div class="relative group">
                         <button class="px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition inline-flex items-center text-sm">
                             <i class="fa-solid fa-graduation-cap mr-1.5 text-unp-navy"></i>
@@ -130,7 +159,6 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 2: EGRESO Y TRABAJO -->
                     <div class="relative group">
                         <button class="px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition inline-flex items-center text-sm">
                             <i class="fa-solid fa-user-gear mr-1.5 text-unp-burgundy"></i>
@@ -147,7 +175,6 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 3: ADMISIONES & COSTOS -->
                     <div class="relative group">
                         <button class="px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition inline-flex items-center text-sm">
                             <i class="fa-solid fa-clipboard-check mr-1.5 text-unp-navy"></i>
@@ -164,7 +191,6 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 4: MULTIMEDIA & COMUNIDAD -->
                     <div class="relative group">
                         <button class="px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition inline-flex items-center text-sm">
                             <i class="fa-solid fa-photo-film mr-1.5 text-amber-600"></i>
@@ -181,15 +207,13 @@
                         </div>
                     </div>
 
-                    <!-- Encuesta / Satisfacción -->
                     <button onclick="navigateTo('satisfaccion')" id="nav-satisfaccion" class="nav-btn px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition text-sm">
                         <i class="fa-solid fa-square-poll-vertical mr-1.5 text-unp-burgundy"></i> Encuesta
                     </button>
 
-                    <!-- Botón Portal Aspirante -->
                     <button onclick="toggleAuthModal()" class="ml-2 bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-4 py-2 rounded-xl shadow border border-red-900 transition flex items-center text-xs">
                         <i class="fa-solid fa-right-to-bracket mr-2 text-amber-300"></i>
-                        <span id="login-btn-text">Portal Aspirantes</span>
+                        <span>Portal Aspirantes</span>
                     </button>
                 </nav>
 
@@ -209,39 +233,23 @@
             </button>
             <div class="pl-3 space-y-1 border-l-2 border-slate-200 my-1">
                 <div class="font-bold text-slate-400 text-[10px] uppercase tracking-wider py-1">Planes de Estudio</div>
-                <button onclick="navigateTo('plan-automotriz'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">
-                    • Ing. en Diseño Automotriz
-                </button>
-                <button onclick="navigateTo('plan-renovables'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-emerald-700">
-                    • Ing. en Energías Renovables
-                </button>
+                <button onclick="navigateTo('plan-automotriz'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">• Ing. en Diseño Automotriz</button>
+                <button onclick="navigateTo('plan-renovables'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-emerald-700">• Ing. en Energías Renovables</button>
             </div>
             <div class="pl-3 space-y-1 border-l-2 border-slate-200 my-1">
                 <div class="font-bold text-slate-400 text-[10px] uppercase tracking-wider py-1">Perfil y Trabajo</div>
-                <button onclick="navigateTo('perfil-egreso'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">
-                    • Perfil de Egreso
-                </button>
-                <button onclick="navigateTo('campo-laboral'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-burgundy">
-                    • Campo Laboral & Impacto Social
-                </button>
+                <button onclick="navigateTo('perfil-egreso'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">• Perfil de Egreso</button>
+                <button onclick="navigateTo('campo-laboral'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-burgundy">• Campo Laboral & Impacto Social</button>
             </div>
             <div class="pl-3 space-y-1 border-l-2 border-slate-200 my-1">
                 <div class="font-bold text-slate-400 text-[10px] uppercase tracking-wider py-1">Admisión y Costos</div>
-                <button onclick="navigateTo('requisitos'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">
-                    • Requisitos de Ingreso
-                </button>
-                <button onclick="navigateTo('costos'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-amber-600">
-                    • Costos, Aranceles y Becas
-                </button>
+                <button onclick="navigateTo('requisitos'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-navy">• Requisitos de Ingreso</button>
+                <button onclick="navigateTo('costos'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-amber-600">• Costos, Aranceles y Becas</button>
             </div>
             <div class="pl-3 space-y-1 border-l-2 border-slate-200 my-1">
                 <div class="font-bold text-slate-400 text-[10px] uppercase tracking-wider py-1">Comunidad</div>
-                <button onclick="navigateTo('testimonios'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-amber-600">
-                    • Testimonios & Spot
-                </button>
-                <button onclick="navigateTo('redes-sociales'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-burgundy">
-                    • Redes Sociales
-                </button>
+                <button onclick="navigateTo('testimonios'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-amber-600">• Testimonios & Spot</button>
+                <button onclick="navigateTo('redes-sociales'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-burgundy">• Redes Sociales</button>
             </div>
             <button onclick="navigateTo('satisfaccion'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-semibold text-slate-700 hover:bg-slate-100">
                 <i class="fa-solid fa-square-poll-vertical mr-2 text-unp-burgundy"></i> Encuesta de Satisfacción (10 Preguntas)
@@ -251,22 +259,6 @@
             </button>
         </div>
     </header>
-
-    <!-- BARRA DE ESTADO DE SESIÓN -->
-    <div id="user-session-bar" class="hidden bg-emerald-800 text-white px-4 py-2 shadow-inner">
-        <div class="max-w-7xl mx-auto flex justify-between items-center text-xs">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-circle-check text-emerald-300"></i>
-                <span>Aspirante Activo: <strong id="logged-user-name">Estudiante</strong> | Folio UNP: <span id="logged-user-folio" class="font-mono bg-emerald-900 px-2 py-0.5 rounded text-amber-300">UNP-2026-9901</span></span>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button onclick="generarFichaInscripcion()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1 rounded text-xs transition">
-                    <i class="fa-solid fa-file-pdf mr-1"></i> Ver Ficha Admisión
-                </button>
-                <button onclick="cerrarSesion()" class="underline hover:text-emerald-200">Cerrar Sesión</button>
-            </div>
-        </div>
-    </div>
 
     <!-- CONTENEDOR PRINCIPAL CON HOJAS DEDICADAS E INDEPENDIENTES (SPA) -->
     <main class="flex-grow">
@@ -400,7 +392,7 @@
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <span class="bg-unp-navy text-white text-[10px] font-bold px-2.5 py-1 rounded">Semestre I</span>
                     <ul class="mt-3 space-y-2 text-xs text-slate-700">
-                        <li class="border-b pb-1"><strong>Cálculo Vectorial</strong> (Prereq: Admisión)</li>
+                        <li class="border-b pb-1"><strong>Cálculo Vectorial</strong></li>
                         <li class="border-b pb-1"><strong>Álgebra Lineal Aplicada</strong></li>
                         <li class="border-b pb-1"><strong>Física y Estática</strong></li>
                         <li class="border-b pb-1"><strong>Dibujo Técnico y Modelado CAD I</strong></li>
@@ -409,7 +401,7 @@
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <span class="bg-unp-navy text-white text-[10px] font-bold px-2.5 py-1 rounded">Semestre II</span>
                     <ul class="mt-3 space-y-2 text-xs text-slate-700">
-                        <li class="border-b pb-1"><strong>Mecánica de Materiales</strong> (Prereq: Estática)</li>
+                        <li class="border-b pb-1"><strong>Mecánica de Materiales</strong></li>
                         <li class="border-b pb-1"><strong>Termodinámica Técnica</strong></li>
                         <li class="border-b pb-1"><strong>Modelado 3D Avanzado (Catia/SolidWorks)</strong></li>
                         <li class="border-b pb-1"><strong>Sistemas Eléctricos Automotrices</strong></li>
@@ -753,7 +745,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Spot Video -->
                     <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
                         <h3 class="font-bold text-xs mb-3 text-slate-200 flex items-center">
                             <i class="fa-solid fa-film text-amber-400 mr-2"></i> Spot Promocional: "Comunidad UNP 2026"
@@ -768,7 +759,6 @@
                         </p>
                     </div>
 
-                    <!-- Testimonio Audio -->
                     <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
                         <div>
                             <h3 class="font-bold text-xs mb-3 text-slate-200 flex items-center">
@@ -825,7 +815,7 @@
             </div>
         </section>
 
-        <!-- HOJA 10: FORMULARIO DE SATISFACCIÓN (EXACTAMENTE 10 PREGUNTAS Y 3 OPCIONES) -->
+        <!-- HOJA 10: FORMULARIO DE SATISFACCIÓN -->
         <section id="satisfaccion" class="page-section max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
                 <div class="text-center mb-8 border-b border-slate-100 pb-6">
@@ -837,7 +827,6 @@
                 </div>
 
                 <form id="form-satisfaccion" onsubmit="procesarEncuesta(event)" class="space-y-6 text-xs md:text-sm">
-
                     <!-- Pregunta 1 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">1. ¿Qué tan clara es la Misión y Visión de la Universidad UNP?</label>
@@ -847,7 +836,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p1" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Confusa o insuficiente</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 2 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">2. ¿Cómo evalúas el Plan de Estudios de Ingeniería en Diseño Automotriz?</label>
@@ -857,7 +845,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p2" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Poco actualizado</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 3 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">3. ¿Qué opinas de la propuesta de Ingeniería en Energías Renovables?</label>
@@ -867,7 +854,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p3" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Poco relevante</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 4 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">4. ¿La tabla de aranceles y programa de becas es transparente?</label>
@@ -877,7 +863,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p4" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Dificultad para entender las cuotas</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 5 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">5. ¿Qué te parece la separación independiente de cada sección en el sitio?</label>
@@ -887,7 +872,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p5" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Prefiero todo en una sola página</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 6 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">6. ¿Los recursos multimedia (audio y spot) te aportaron valor?</label>
@@ -897,7 +881,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p6" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Poco útiles</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 7 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">7. ¿Consideras valioso el requisito de proyectos comunitarios para titulación?</label>
@@ -907,7 +890,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p7" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Innecesario</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 8 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">8. ¿La navegación en las redes sociales mediante imágenes con hipervínculos es adecuada?</label>
@@ -917,7 +899,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p8" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Difícil de usar</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 9 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">9. ¿El proceso simulado para solicitar ficha de examen de admisión te resultó sencillo?</label>
@@ -927,7 +908,6 @@
                             <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="p9" value="1" class="text-unp-burgundy"> <span class="ml-2">C) Complicado</span></label>
                         </div>
                     </div>
-
                     <!-- Pregunta 10 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">10. ¿Recomendarías a la Universidad UNP a un estudiante interesado en ingeniería?</label>
@@ -943,7 +923,6 @@
                             <i class="fa-solid fa-paper-plane mr-2"></i> Enviar Resultados de Encuesta
                         </button>
                     </div>
-
                 </form>
 
                 <div id="survey-result" class="hidden mt-6 p-6 bg-emerald-50 rounded-2xl border border-emerald-200 text-center">
@@ -958,7 +937,7 @@
 
     </main>
 
-    <!-- MODAL DE INICIO DE SESIÓN -->
+    <!-- MODAL DE INICIO DE SESIÓN / REGISTRO CONECTADO A BASE DE DATOS -->
     <div id="auth-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 relative">
             <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
@@ -968,68 +947,31 @@
             <div class="bg-unp-navy text-white p-6 text-center">
                 <i class="fa-solid fa-user-shield text-3xl text-amber-400 mb-2"></i>
                 <h3 class="text-xl font-bold">Portal del Aspirante UNP</h3>
-                <p class="text-xs text-slate-300">Genera tu Ficha de Admisión 2026</p>
+                <p class="text-xs text-slate-300">Guarda tus datos directo en la Base de Datos</p>
             </div>
 
-            <form id="login-form" onsubmit="procesarLogin(event)" class="p-6 space-y-4 text-xs">
+            <!-- Este formulario ahora envía los datos por POST a este mismo archivo PHP -->
+            <form method="POST" class="p-6 space-y-4 text-xs">
                 <div>
                     <label class="block font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
-                    <input type="text" id="login-name" required placeholder="Ej. Ana Lucía Morales" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
+                    <input type="text" name="nombre" required placeholder="Ej. Ana Lucía Morales" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 uppercase mb-1">Carrera Seleccionada</label>
-                    <select id="login-career" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
+                    <select name="carrera" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
                         <option value="Ingeniería en Diseño Automotriz">Ingeniería en Diseño Automotriz</option>
                         <option value="Ingeniería en Energías Renovables">Ingeniería en Energías Renovables</option>
                     </select>
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 uppercase mb-1">Correo Electrónico</label>
-                    <input type="email" id="login-email" required placeholder="aspirante@unp.edu.mx" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
+                    <input type="email" name="correo" required placeholder="aspirante@unp.edu.mx" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
                 </div>
 
-                <button type="submit" class="w-full bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold py-2.5 rounded-xl shadow transition">
-                    Obtener Ficha UNP
+                <button type="submit" name="registrar_aspirante" class="w-full bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold py-2.5 rounded-xl shadow transition">
+                    Guardar Registro en la Nube
                 </button>
             </form>
-        </div>
-    </div>
-
-    <!-- MODAL FICHA DE ADMISIÓN -->
-    <div id="ficha-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 relative">
-            <button onclick="toggleFichaModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            
-            <div class="text-center border-b border-slate-200 pb-4 mb-4">
-                <h3 class="text-xl font-bold text-unp-navy">Ficha Oficial de Pre-Inscripción UNP</h3>
-                <p class="text-xs text-slate-500">Universidad UNP - Ciclo 2026</p>
-            </div>
-
-            <div class="space-y-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <div class="flex justify-between">
-                    <span class="text-slate-500">Folio UNP:</span>
-                    <span class="font-mono font-bold text-unp-burgundy" id="modal-folio">UNP-2026-8810</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500">Aspirante:</span>
-                    <span class="font-bold text-slate-800" id="modal-nombre">Ana Lucía Morales</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-500">Carrera Registrada:</span>
-                    <span class="font-bold text-unp-navy" id="modal-carrera">Ingeniería en Diseño Automotriz</span>
-                </div>
-            </div>
-
-            <div class="mt-6 flex space-x-3">
-                <button onclick="copiarFolio()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 rounded-xl text-xs transition">
-                    <i class="fa-regular fa-copy mr-1"></i> Copiar Folio
-                </button>
-                <button onclick="window.print()" class="flex-1 bg-unp-navy hover:bg-slate-800 text-white font-bold py-2 rounded-xl text-xs shadow transition">
-                    <i class="fa-solid fa-print mr-1"></i> Imprimir Ficha
-                </button>
-            </div>
         </div>
     </div>
 
@@ -1067,8 +1009,6 @@
 
     <!-- LÓGICA JAVASCRIPT SPA -->
     <script>
-        let currentUser = null;
-
         function navigateTo(sectionId) {
             document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
             const target = document.getElementById(sectionId);
@@ -1092,62 +1032,6 @@
 
         function toggleAuthModal() {
             document.getElementById('auth-modal').classList.toggle('hidden');
-        }
-
-        function toggleFichaModal() {
-            document.getElementById('ficha-modal').classList.toggle('hidden');
-        }
-
-        function procesarLogin(e) {
-            e.preventDefault();
-            const nombre = document.getElementById('login-name').value;
-            const carrera = document.getElementById('login-career').value;
-
-            const randomFolio = 'UNP-2026-' + Math.floor(1000 + Math.random() * 9000);
-
-            currentUser = {
-                nombre: nombre,
-                carrera: carrera,
-                folio: randomFolio
-            };
-
-            document.getElementById('logged-user-name').textContent = currentUser.nombre;
-            document.getElementById('logged-user-folio').textContent = currentUser.folio;
-            document.getElementById('login-btn-text').textContent = "Mi Cuenta UNP";
-            document.getElementById('user-session-bar').classList.remove('hidden');
-
-            document.getElementById('modal-nombre').textContent = currentUser.nombre;
-            document.getElementById('modal-carrera').textContent = currentUser.carrera;
-            document.getElementById('modal-folio').textContent = currentUser.folio;
-
-            toggleAuthModal();
-            toggleFichaModal();
-        }
-
-        function generarFichaInscripcion() {
-            if (!currentUser) {
-                toggleAuthModal();
-            } else {
-                toggleFichaModal();
-            }
-        }
-
-        function cerrarSesion() {
-            currentUser = null;
-            document.getElementById('user-session-bar').classList.add('hidden');
-            document.getElementById('login-btn-text').textContent = "Portal Aspirantes";
-        }
-
-        function copiarFolio() {
-            if (currentUser) {
-                const temp = document.createElement('input');
-                temp.value = currentUser.folio;
-                document.body.appendChild(temp);
-                temp.select();
-                document.execCommand('copy');
-                document.body.removeChild(temp);
-                alert('¡Folio UNP copiado!');
-            }
         }
 
         function procesarEncuesta(e) {
