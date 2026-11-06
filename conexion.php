@@ -1,6 +1,6 @@
 <?php
 $host = "b6p6oz7mnrce350oem9f-mysql.services.clever-cloud.com";
-$user = "ur051g1mpolqph4j";
+$user = "uhavndk8sr1l2xci";
 $password = "q5ipQtnEUt4YQFnlqSHn";
 $dbname = "b6p6oz7mnrce350oem9f";
 $port = 3306;
