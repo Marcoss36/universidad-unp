@@ -3,6 +3,47 @@ include 'conexion.php';
 
 $mensaje_exito = "";
 
+// ===== GUARDADO AJAX: TEST VOCACIONAL Y ENCUESTA DE SATISFACCIÓN =====
+if (isset($_POST['accion']) && in_array($_POST['accion'], ['guardar_vocacional', 'guardar_encuesta'], true)) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $ok = false;
+
+    if ($_POST['accion'] === 'guardar_vocacional') {
+        // Tabla: test_vocacion (nombre_aspirante, resultado_carrera, puntos_automotriz, puntos_renovables)
+        $nombre = trim(substr($_POST['nombre_aspirante'] ?? '', 0, 150));
+        $pa = (int)($_POST['puntos_automotriz'] ?? 0);
+        $pr = (int)($_POST['puntos_renovables'] ?? 0);
+        $carrera = $pa > $pr ? 'Ingeniería en Diseño Automotriz'
+                 : ($pr > $pa ? 'Ingeniería en Energías Renovables' : 'Perfil equilibrado');
+
+        $stmt = $conexion->prepare("INSERT INTO test_vocacion (nombre_aspirante, resultado_carrera, puntos_automotriz, puntos_renovables) VALUES (?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("ssii", $nombre, $carrera, $pa, $pr);
+            $ok = $stmt->execute();
+            $stmt->close();
+        }
+    } else {
+        // Tabla: respuestas_encuesta (puntaje_total, porcentaje)
+        $total = 0;
+        for ($i = 1; $i <= 10; $i++) {
+            $v = (int)($_POST["p$i"] ?? 0);
+            $total += ($v >= 1 && $v <= 3) ? $v : 1;
+        }
+        $porcentaje = round(($total / 30) * 100, 2);
+
+        $stmt = $conexion->prepare("INSERT INTO respuestas_encuesta (puntaje_total, porcentaje) VALUES (?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("id", $total, $porcentaje);
+            $ok = $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    echo json_encode(['ok' => $ok]);
+    exit;
+}
+
 // C - INSERTAR ASPIRANTE DESDE EL PORTAL
 if (isset($_POST['registrar_aspirante'])) {
     $nombre = $_POST['nombre'];
@@ -842,6 +883,10 @@ if (isset($_POST['registrar_aspirante'])) {
                 </div>
 
                 <form id="form-vocacional" onsubmit="procesarVocacional(event)" class="space-y-6 text-xs md:text-sm" oninput="actualizarProgresoVocacional()">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2" for="voc-nombre">Tu nombre completo</label>
+                        <input type="text" id="voc-nombre" name="nombre_aspirante" required maxlength="150" placeholder="Ej. Ana Lucía Morales" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
+                    </div>
                     <!-- Valores: a = Automotriz, r = Renovables, m = ambas -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label class="block font-semibold text-slate-800 mb-2">1. ¿Qué proyecto te emocionaría más construir?</label>
@@ -960,7 +1005,8 @@ if (isset($_POST['registrar_aspirante'])) {
                             <i class="fa-solid fa-user-plus mr-1.5"></i> Solicitar ficha de admisión
                         </button>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-4">Este test es una guía orientativa y no sustituye una asesoría vocacional profesional.</p>
+                    <p id="voc-save-status" class="text-[11px] mt-4 text-slate-500"></p>
+                    <p class="text-[10px] text-slate-400 mt-2">Este test es una guía orientativa y no sustituye una asesoría vocacional profesional.</p>
                 </div>
             </div>
         </section>
@@ -1081,6 +1127,7 @@ if (isset($_POST['registrar_aspirante'])) {
                     </div>
                     <h3 class="text-lg font-bold text-emerald-900">¡Encuesta Recibida Exitosamente!</h3>
                     <p class="text-xs text-emerald-700 mt-1" id="survey-score-text">Puntaje total: 30 de 30 puntos.</p>
+                    <p id="survey-save-status" class="text-[11px] mt-2 text-slate-500"></p>
                 </div>
             </div>
         </section>
@@ -1184,10 +1231,31 @@ if (isset($_POST['registrar_aspirante'])) {
             document.getElementById('auth-modal').classList.toggle('hidden');
         }
 
+        // Envía datos por POST a este mismo archivo y muestra el estado del guardado
+        function guardarEnBD(datos, idEstado, mensajeOk) {
+            const el = document.getElementById(idEstado);
+            el.className = 'text-[11px] mt-4 text-slate-500';
+            el.textContent = 'Guardando...';
+            fetch(window.location.pathname, { method: 'POST', body: datos })
+                .then(r => r.json())
+                .then(j => {
+                    if (j.ok) {
+                        el.className = 'text-[11px] mt-4 text-emerald-700 font-semibold';
+                        el.textContent = mensajeOk;
+                    } else {
+                        throw new Error('db');
+                    }
+                })
+                .catch(() => {
+                    el.className = 'text-[11px] mt-4 text-red-700 font-semibold';
+                    el.textContent = 'No se pudo guardar en la base de datos.';
+                });
+        }
+
         // ===== TEST VOCACIONAL =====
         function actualizarProgresoVocacional() {
             const respondidas = new FormData(document.getElementById('form-vocacional'));
-            const n = Array.from(respondidas.keys()).length;
+            const n = Array.from(respondidas.keys()).filter(k => k !== 'nombre_aspirante').length;
             document.getElementById('voc-progress-text').textContent = `${n} de 10`;
             document.getElementById('voc-progress-bar').style.width = `${n * 10}%`;
         }
@@ -1198,6 +1266,7 @@ if (isset($_POST['registrar_aspirante'])) {
             let a = 0, r = 0, count = 0;
 
             for (let [k, v] of formData.entries()) {
+                if (k === 'nombre_aspirante') continue;
                 count++;
                 if (v === 'a') a += 2;
                 else if (v === 'r') r += 2;
@@ -1250,6 +1319,14 @@ if (isset($_POST['registrar_aspirante'])) {
             }
 
             btnPlan.onclick = () => navigateTo(destino);
+
+            // Guardar en la base de datos
+            const datos = new URLSearchParams();
+            datos.append('accion', 'guardar_vocacional');
+            datos.append('nombre_aspirante', formData.get('nombre_aspirante'));
+            datos.append('puntos_automotriz', a);
+            datos.append('puntos_renovables', r);
+            guardarEnBD(datos, 'voc-save-status', 'Resultado guardado en la base de datos.');
             document.getElementById('voc-pct-a').textContent = pctA + '%';
             document.getElementById('voc-pct-r').textContent = pctR + '%';
             document.getElementById('voc-bar-a').style.width = pctA + '%';
@@ -1287,6 +1364,12 @@ if (isset($_POST['registrar_aspirante'])) {
             document.getElementById('survey-score-text').textContent = `Puntaje obtenido: ${total} de 30 puntos posibles (${pct}% de satisfacción).`;
             res.classList.remove('hidden');
             res.scrollIntoView({ behavior: 'smooth' });
+
+            // Guardar en la base de datos
+            const datos = new URLSearchParams();
+            datos.append('accion', 'guardar_encuesta');
+            for (let [k, v] of formData.entries()) datos.append(k, v);
+            guardarEnBD(datos, 'survey-save-status', 'Respuestas guardadas en la base de datos.');
         }
 
         window.onload = function() {
