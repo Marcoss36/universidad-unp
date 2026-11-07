@@ -50,10 +50,10 @@ if (isset($_POST['registrar_aspirante'])) {
     $correo = $_POST['correo'];
     $carrera = $_POST['carrera'];
     $folio = 'UNP-2026-' . rand(1000, 9999);
-    $curp = strtoupper(trim($_POST['curp'] ?? ''));
+    $curp = strtoupper(substr(trim($_POST['curp'] ?? ''), 0, 18));
 
-    if (!preg_match('/^[A-Z]{4}[0-9]{6}[HMX][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9][0-9]$/', $curp)) {
-        $mensaje_exito = "La CURP no es válida. Debe tener 18 caracteres.";
+    if ($curp === '') {
+        $mensaje_exito = "Por favor escribe tu CURP.";
     } else {
     $stmt = $conexion->prepare("INSERT INTO aspirantes (folio, nombre, correo, curp, carrera) VALUES (?, ?, ?, ?, ?)");
     if ($stmt) {
@@ -1159,7 +1159,7 @@ if (isset($_POST['registrar_aspirante'])) {
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 uppercase mb-1">CURP</label>
-                    <input type="text" name="curp" required minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HhMmXx][A-Za-z]{2}[A-Za-z]{3}[A-Za-z0-9][0-9]" title="La CURP tiene 18 caracteres" placeholder="Ej. MOLA050612MPLRNN09" style="text-transform: uppercase" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
+                    <input type="text" name="curp" required maxlength="18" placeholder="Ej. MOLA050612MPLRNN09" style="text-transform: uppercase" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 uppercase mb-1">Carrera Seleccionada</label>
