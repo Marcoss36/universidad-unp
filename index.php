@@ -207,6 +207,10 @@ if (isset($_POST['registrar_aspirante'])) {
                         </div>
                     </div>
 
+                    <button onclick="navigateTo('test-vocacional')" id="nav-test-vocacional" class="nav-btn px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition text-sm">
+                        <i class="fa-solid fa-compass mr-1.5 text-amber-600"></i> Test Vocacional
+                    </button>
+
                     <button onclick="navigateTo('satisfaccion')" id="nav-satisfaccion" class="nav-btn px-3 py-2 rounded-lg font-medium text-slate-700 hover:text-unp-navy hover:bg-slate-100 transition text-sm">
                         <i class="fa-solid fa-square-poll-vertical mr-1.5 text-unp-burgundy"></i> Encuesta
                     </button>
@@ -251,6 +255,9 @@ if (isset($_POST['registrar_aspirante'])) {
                 <button onclick="navigateTo('testimonios'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-amber-600">• Testimonios & Spot</button>
                 <button onclick="navigateTo('redes-sociales'); toggleMobileMenu();" class="block w-full text-left px-2 py-1 text-slate-600 hover:text-unp-burgundy">• Redes Sociales</button>
             </div>
+            <button onclick="navigateTo('test-vocacional'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-semibold text-slate-700 hover:bg-slate-100">
+                <i class="fa-solid fa-compass mr-2 text-amber-600"></i> Test Vocacional
+            </button>
             <button onclick="navigateTo('satisfaccion'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md font-semibold text-slate-700 hover:bg-slate-100">
                 <i class="fa-solid fa-square-poll-vertical mr-2 text-unp-burgundy"></i> Encuesta de Satisfacción (10 Preguntas)
             </button>
@@ -815,6 +822,149 @@ if (isset($_POST['registrar_aspirante'])) {
             </div>
         </section>
 
+        <!-- HOJA: TEST VOCACIONAL -->
+        <section id="test-vocacional" class="page-section max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+                <div class="text-center mb-8 border-b border-slate-100 pb-6">
+                    <span class="bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Orientación Vocacional UNP</span>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-unp-navy mt-2">Test Vocacional: ¿Qué ingeniería es para ti?</h1>
+                    <p class="text-slate-600 text-xs md:text-sm mt-2">
+                        Responde <strong>10 preguntas</strong> sobre tus gustos y habilidades. Al final te sugeriremos la carrera de la UNP que mejor encaja contigo.
+                    </p>
+                    <!-- Barra de progreso -->
+                    <div class="mt-4 max-w-md mx-auto">
+                        <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                            <span>Progreso</span>
+                            <span id="voc-progress-text">0 de 10</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-progress-bar" class="bg-unp-burgundy h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                    </div>
+                </div>
+
+                <form id="form-vocacional" onsubmit="procesarVocacional(event)" class="space-y-6 text-xs md:text-sm" oninput="actualizarProgresoVocacional()">
+                    <!-- Valores: a = Automotriz, r = Renovables, m = ambas -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">1. ¿Qué proyecto te emocionaría más construir?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Un auto eléctrico de competencia</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Un parque solar que dé luz a una comunidad</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Un sistema de baterías para ambos usos</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">2. ¿Qué herramienta te gustaría dominar?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Software de diseño 3D y simulación (CAD/CFD)</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Software para dimensionar sistemas solares y eólicos</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Programación y análisis de datos de ingeniería</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">3. ¿Qué materia disfrutas más?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Física: fuerzas, movimiento y estructuras</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Química, ecología y electricidad</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Matemáticas puras</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">4. ¿Dónde te imaginas trabajando?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) En un centro de desarrollo de una armadora</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="r" class="text-unp-burgundy"> <span class="ml-2">B) En campo, en plantas solares o eólicas</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="m" class="text-unp-burgundy"> <span class="ml-2">C) En un laboratorio de investigación</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">5. ¿Qué problema del mundo quisieras resolver?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Que la movilidad sea más segura, eficiente y limpia</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Que todos tengan acceso a energía limpia y barata</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Reducir la contaminación en general</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">6. Un sábado libre, ¿qué prefieres hacer?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Ver carreras, armar maquetas o desarmar motores</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Salir al aire libre y experimentar con paneles o turbinas pequeñas</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Leer o ver documentales de ciencia y tecnología</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">7. ¿Cómo te gusta trabajar?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Perfeccionando detalles de un diseño con precisión</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Planeando proyectos de gran escala con impacto social</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Combinando ambas formas según el reto</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">8. ¿Qué tecnología te parece más fascinante?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Conducción autónoma y sensores</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Hidrógeno verde y redes eléctricas inteligentes</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Baterías de nueva generación</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">9. ¿Qué logro profesional te daría más orgullo?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Ver en la calle un vehículo que yo ayudé a diseñar</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Llevar electricidad a una comunidad rural</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Publicar una investigación que cambie la industria</span></label>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <label class="block font-semibold text-slate-800 mb-2">10. ¿Qué describe mejor tu personalidad?</label>
+                        <div class="space-y-1">
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Creativo, perfeccionista y apasionado por la velocidad</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Consciente del ambiente, líder y orientado a la comunidad</span></label>
+                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Curioso, analítico y adaptable</span></label>
+                        </div>
+                    </div>
+
+                    <div class="text-center pt-4 flex flex-wrap justify-center gap-3">
+                        <button type="submit" class="bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-8 py-3 rounded-xl shadow-lg transition text-xs">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Ver mi resultado
+                        </button>
+                        <button type="button" onclick="reiniciarVocacional()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-xl transition text-xs border border-slate-200">
+                            <i class="fa-solid fa-rotate-left mr-2"></i> Reiniciar
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Resultado -->
+                <div id="voc-result" class="hidden mt-8 p-6 rounded-2xl border text-center">
+                    <div id="voc-result-icon" class="w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3"></div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tu carrera sugerida</span>
+                    <h3 id="voc-result-title" class="text-xl md:text-2xl font-extrabold mt-1"></h3>
+                    <p id="voc-result-desc" class="text-xs md:text-sm text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed"></p>
+
+                    <div class="max-w-md mx-auto mt-5 space-y-3 text-xs text-left">
+                        <div>
+                            <div class="flex justify-between mb-1"><span class="font-semibold text-slate-700">Diseño Automotriz</span><span id="voc-pct-a" class="font-bold text-unp-navy">0%</span></div>
+                            <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-bar-a" class="bg-unp-navy h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1"><span class="font-semibold text-slate-700">Energías Renovables</span><span id="voc-pct-r" class="font-bold text-emerald-700">0%</span></div>
+                            <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-bar-r" class="bg-emerald-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex flex-wrap justify-center gap-3">
+                        <button id="voc-btn-plan" type="button" class="font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white">
+                            <i class="fa-solid fa-book-open mr-1.5"></i> Ver plan de estudios
+                        </button>
+                        <button type="button" onclick="toggleAuthModal()" class="bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition">
+                            <i class="fa-solid fa-user-plus mr-1.5"></i> Solicitar ficha de admisión
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-4">Este test es una guía orientativa y no sustituye una asesoría vocacional profesional.</p>
+                </div>
+            </div>
+        </section>
+
         <!-- HOJA 10: FORMULARIO DE SATISFACCIÓN -->
         <section id="satisfaccion" class="page-section max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
@@ -1032,6 +1182,88 @@ if (isset($_POST['registrar_aspirante'])) {
 
         function toggleAuthModal() {
             document.getElementById('auth-modal').classList.toggle('hidden');
+        }
+
+        // ===== TEST VOCACIONAL =====
+        function actualizarProgresoVocacional() {
+            const respondidas = new FormData(document.getElementById('form-vocacional'));
+            const n = Array.from(respondidas.keys()).length;
+            document.getElementById('voc-progress-text').textContent = `${n} de 10`;
+            document.getElementById('voc-progress-bar').style.width = `${n * 10}%`;
+        }
+
+        function procesarVocacional(e) {
+            e.preventDefault();
+            const formData = new FormData(document.getElementById('form-vocacional'));
+            let a = 0, r = 0, count = 0;
+
+            for (let [k, v] of formData.entries()) {
+                count++;
+                if (v === 'a') a += 2;
+                else if (v === 'r') r += 2;
+                else { a += 1; r += 1; } // opción neutral suma a ambas
+            }
+
+            if (count < 10) {
+                alert('Por favor responde las 10 preguntas antes de ver tu resultado.');
+                return;
+            }
+
+            const max = 20;
+            const pctA = Math.round((a / max) * 100);
+            const pctR = Math.round((r / max) * 100);
+
+            const res = document.getElementById('voc-result');
+            const icon = document.getElementById('voc-result-icon');
+            const title = document.getElementById('voc-result-title');
+            const desc = document.getElementById('voc-result-desc');
+            const btnPlan = document.getElementById('voc-btn-plan');
+
+            let destino;
+            if (a > r) {
+                destino = 'plan-automotriz';
+                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-blue-50 border-blue-200';
+                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-unp-navy';
+                icon.innerHTML = '<i class="fa-solid fa-car"></i>';
+                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-unp-navy';
+                title.textContent = 'Ingeniería en Diseño Automotriz';
+                desc.textContent = 'Tienes perfil creativo y técnico, con gusto por el diseño, la precisión y la movilidad del futuro. Esta carrera te llevará del modelado CAD a vehículos eléctricos y autónomos.';
+                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-unp-navy hover:bg-unp-navyLight';
+            } else if (r > a) {
+                destino = 'plan-renovables';
+                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-emerald-50 border-emerald-200';
+                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-emerald-700';
+                icon.innerHTML = '<i class="fa-solid fa-leaf"></i>';
+                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-emerald-900';
+                title.textContent = 'Ingeniería en Energías Renovables';
+                desc.textContent = 'Te mueve el impacto social y ambiental, y te interesa liderar proyectos de energía limpia a gran escala. Esta carrera te preparará en solar, eólica, hidrógeno y redes inteligentes.';
+                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-emerald-700 hover:bg-emerald-800';
+            } else {
+                destino = 'plan-automotriz';
+                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-amber-50 border-amber-200';
+                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-amber-600';
+                icon.innerHTML = '<i class="fa-solid fa-scale-balanced"></i>';
+                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-amber-900';
+                title.textContent = 'Perfil equilibrado: ambas carreras encajan contigo';
+                desc.textContent = 'Tus intereses se reparten por igual entre movilidad y energía. Revisa los dos planes de estudio y elige el que más te entusiasme; ambos comparten bases en electrificación y baterías.';
+                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-amber-600 hover:bg-amber-700';
+            }
+
+            btnPlan.onclick = () => navigateTo(destino);
+            document.getElementById('voc-pct-a').textContent = pctA + '%';
+            document.getElementById('voc-pct-r').textContent = pctR + '%';
+            document.getElementById('voc-bar-a').style.width = pctA + '%';
+            document.getElementById('voc-bar-r').style.width = pctR + '%';
+
+            res.classList.remove('hidden');
+            res.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function reiniciarVocacional() {
+            document.getElementById('form-vocacional').reset();
+            document.getElementById('voc-result').classList.add('hidden');
+            actualizarProgresoVocacional();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function procesarEncuesta(e) {
