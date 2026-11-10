@@ -11,11 +11,12 @@ if (isset($_POST['accion']) && in_array($_POST['accion'], ['guardar_vocacional',
 
     if ($_POST['accion'] === 'guardar_vocacional') {
         // Tabla: test_vocacion (nombre_aspirante, resultado_carrera, puntos_automotriz, puntos_renovables)
-        $nombre = trim(substr($_POST['nombre_aspirante'] ?? '', 0, 150));
-        $pa = (int)($_POST['puntos_automotriz'] ?? 0);
-        $pr = (int)($_POST['puntos_renovables'] ?? 0);
-        $carrera = $pa > $pr ? 'Ingeniería en Diseño Automotriz'
-                 : ($pr > $pa ? 'Ingeniería en Energías Renovables' : 'Perfil equilibrado');
+        // El test general ya no usa puntos por carrera: resultado_carrera guarda las 3 áreas principales con su puntaje
+        // y las columnas de puntos se dejan en 0 (ver nota de ALTER TABLE para guardar los 6 puntajes).
+        $nombre = trim(mb_substr($_POST['nombre_aspirante'] ?? '', 0, 150));
+        $carrera = trim(mb_substr(strip_tags($_POST['resultado_carrera'] ?? ''), 0, 100));
+        $pa = 0;
+        $pr = 0;
 
         $stmt = $conexion->prepare("INSERT INTO test_vocacion (nombre_aspirante, resultado_carrera, puntos_automotriz, puntos_renovables) VALUES (?, ?, ?, ?)");
         if ($stmt) {
@@ -867,114 +868,47 @@ if (isset($_POST['registrar_aspirante'])) {
             </div>
         </section>
 
-        <!-- HOJA: TEST VOCACIONAL -->
+        <!-- HOJA: TEST VOCACIONAL (60 preguntas, general) -->
         <section id="test-vocacional" class="page-section max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
                 <div class="text-center mb-8 border-b border-slate-100 pb-6">
-                    <span class="bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Orientación Vocacional UNP</span>
-                    <h1 class="text-2xl md:text-3xl font-extrabold text-unp-navy mt-2">Test Vocacional: ¿Qué ingeniería es para ti?</h1>
-                    <p class="text-slate-600 text-xs md:text-sm mt-2">
-                        Responde <strong>10 preguntas</strong> sobre tus gustos y habilidades. Al final te sugeriremos la carrera de la UNP que mejor encaja contigo.
+                    <span class="bg-amber-50 text-amber-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Orientación Vocacional</span>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-unp-navy mt-2">Test Vocacional: descubre tu perfil profesional</h1>
+                    <p class="text-slate-600 text-xs md:text-sm mt-2 max-w-2xl mx-auto">
+                        Responde <strong>60 preguntas</strong> sobre actividades que te gustaría realizar. No hay respuestas correctas ni incorrectas: contesta con sinceridad. Al final conocerás tus áreas de mayor afinidad y carreras que se estudian en México relacionadas con ellas.
                     </p>
                     <!-- Barra de progreso -->
                     <div class="mt-4 max-w-md mx-auto">
                         <div class="flex justify-between text-[11px] text-slate-500 mb-1">
-                            <span>Progreso</span>
-                            <span id="voc-progress-text">0 de 10</span>
+                            <span id="voc-page-text">Parte 1 de 6</span>
+                            <span id="voc-progress-text">0 de 60 respondidas</span>
                         </div>
                         <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-progress-bar" class="bg-unp-burgundy h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
                     </div>
                 </div>
 
-                <form id="form-vocacional" onsubmit="procesarVocacional(event)" class="space-y-6 text-xs md:text-sm" oninput="actualizarProgresoVocacional()">
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <form id="form-vocacional" onsubmit="procesarVocacional(event)" class="text-xs md:text-sm" novalidate>
+                    <!-- Nombre -->
+                    <div id="voc-nombre-box" class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                         <label class="block font-semibold text-slate-800 mb-2" for="voc-nombre">Tu nombre completo</label>
-                        <input type="text" id="voc-nombre" name="nombre_aspirante" required maxlength="150" placeholder="Ej. Ana Lucía Morales" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
-                    </div>
-                    <!-- Valores: a = Automotriz, r = Renovables, m = ambas -->
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">1. ¿Qué proyecto te emocionaría más construir?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Un auto eléctrico de competencia</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Un parque solar que dé luz a una comunidad</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v1" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Un sistema de baterías para ambos usos</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">2. ¿Qué herramienta te gustaría dominar?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Software de diseño 3D y simulación (CAD/CFD)</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Software para dimensionar sistemas solares y eólicos</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v2" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Programación y análisis de datos de ingeniería</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">3. ¿Qué materia disfrutas más?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Física: fuerzas, movimiento y estructuras</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Química, ecología y electricidad</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v3" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Matemáticas puras</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">4. ¿Dónde te imaginas trabajando?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) En un centro de desarrollo de una armadora</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="r" class="text-unp-burgundy"> <span class="ml-2">B) En campo, en plantas solares o eólicas</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v4" value="m" class="text-unp-burgundy"> <span class="ml-2">C) En un laboratorio de investigación</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">5. ¿Qué problema del mundo quisieras resolver?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Que la movilidad sea más segura, eficiente y limpia</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Que todos tengan acceso a energía limpia y barata</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v5" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Reducir la contaminación en general</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">6. Un sábado libre, ¿qué prefieres hacer?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Ver carreras, armar maquetas o desarmar motores</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Salir al aire libre y experimentar con paneles o turbinas pequeñas</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v6" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Leer o ver documentales de ciencia y tecnología</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">7. ¿Cómo te gusta trabajar?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Perfeccionando detalles de un diseño con precisión</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Planeando proyectos de gran escala con impacto social</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v7" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Combinando ambas formas según el reto</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">8. ¿Qué tecnología te parece más fascinante?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Conducción autónoma y sensores</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Hidrógeno verde y redes eléctricas inteligentes</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v8" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Baterías de nueva generación</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">9. ¿Qué logro profesional te daría más orgullo?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Ver en la calle un vehículo que yo ayudé a diseñar</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Llevar electricidad a una comunidad rural</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v9" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Publicar una investigación que cambie la industria</span></label>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <label class="block font-semibold text-slate-800 mb-2">10. ¿Qué describe mejor tu personalidad?</label>
-                        <div class="space-y-1">
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="a" required class="text-unp-burgundy"> <span class="ml-2">A) Creativo, perfeccionista y apasionado por la velocidad</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="r" class="text-unp-burgundy"> <span class="ml-2">B) Consciente del ambiente, líder y orientado a la comunidad</span></label>
-                            <label class="flex items-center p-2 rounded hover:bg-white cursor-pointer"><input type="radio" name="v10" value="m" class="text-unp-burgundy"> <span class="ml-2">C) Curioso, analítico y adaptable</span></label>
-                        </div>
+                        <input type="text" id="voc-nombre" name="nombre_aspirante" maxlength="150" placeholder="Ej. Ana Lucía Morales" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-unp-navy">
                     </div>
 
-                    <div class="text-center pt-4 flex flex-wrap justify-center gap-3">
-                        <button type="submit" class="bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-8 py-3 rounded-xl shadow-lg transition text-xs">
+                    <p class="font-semibold text-slate-800 mb-3">¿Qué tanto te gustaría o te gusta realizar cada actividad?</p>
+
+                    <!-- Las 60 preguntas se generan por JavaScript, 10 por página -->
+                    <div id="voc-questions" class="space-y-3"></div>
+
+                    <p id="voc-error" class="hidden text-red-700 font-semibold text-xs mt-4 text-center"></p>
+
+                    <div class="pt-6 flex flex-wrap justify-center gap-3">
+                        <button type="button" id="voc-btn-prev" onclick="vocCambiarPagina(-1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-xl transition text-xs border border-slate-200">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Anterior
+                        </button>
+                        <button type="button" id="voc-btn-next" onclick="vocCambiarPagina(1)" class="bg-unp-navy hover:bg-unp-navyLight text-white font-bold px-8 py-3 rounded-xl shadow transition text-xs">
+                            Siguiente <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                        <button type="submit" id="voc-btn-submit" class="hidden bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-8 py-3 rounded-xl shadow-lg transition text-xs">
                             <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Ver mi resultado
                         </button>
                         <button type="button" onclick="reiniciarVocacional()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-3 rounded-xl transition text-xs border border-slate-200">
@@ -984,33 +918,29 @@ if (isset($_POST['registrar_aspirante'])) {
                 </form>
 
                 <!-- Resultado -->
-                <div id="voc-result" class="hidden mt-8 p-6 rounded-2xl border text-center">
-                    <div id="voc-result-icon" class="w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3"></div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tu carrera sugerida</span>
-                    <h3 id="voc-result-title" class="text-xl md:text-2xl font-extrabold mt-1"></h3>
-                    <p id="voc-result-desc" class="text-xs md:text-sm text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed"></p>
+                <div id="voc-result" class="hidden mt-8">
+                    <div class="text-center mb-5">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tus áreas de mayor afinidad</span>
+                        <h3 id="voc-result-title" class="text-xl md:text-2xl font-extrabold text-unp-navy mt-1"></h3>
+                    </div>
 
-                    <div class="max-w-md mx-auto mt-5 space-y-3 text-xs text-left">
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="font-semibold text-slate-700">Diseño Automotriz</span><span id="voc-pct-a" class="font-bold text-unp-navy">0%</span></div>
-                            <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-bar-a" class="bg-unp-navy h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1"><span class="font-semibold text-slate-700">Energías Renovables</span><span id="voc-pct-r" class="font-bold text-emerald-700">0%</span></div>
-                            <div class="w-full bg-slate-200 rounded-full h-2"><div id="voc-bar-r" class="bg-emerald-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
-                        </div>
+                    <div id="voc-result-cards" class="space-y-4"></div>
+
+                    <div class="max-w-xl mx-auto mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <p class="font-semibold text-slate-700 text-xs mb-3">Tu puntaje en cada área</p>
+                        <div id="voc-bars" class="space-y-3 text-xs"></div>
                     </div>
 
                     <div class="mt-6 flex flex-wrap justify-center gap-3">
-                        <button id="voc-btn-plan" type="button" class="font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white">
-                            <i class="fa-solid fa-book-open mr-1.5"></i> Ver plan de estudios
-                        </button>
                         <button type="button" onclick="toggleAuthModal()" class="bg-unp-burgundy hover:bg-unp-burgundyHover text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow transition">
                             <i class="fa-solid fa-user-plus mr-1.5"></i> Solicitar ficha de admisión
                         </button>
+                        <button type="button" onclick="reiniciarVocacional()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition text-xs border border-slate-200">
+                            <i class="fa-solid fa-rotate-left mr-1.5"></i> Repetir el test
+                        </button>
                     </div>
-                    <p id="voc-save-status" class="text-[11px] mt-4 text-slate-500"></p>
-                    <p class="text-[10px] text-slate-400 mt-2">Este test es una guía orientativa y no sustituye una asesoría vocacional profesional.</p>
+                    <p id="voc-save-status" class="text-[11px] mt-4 text-slate-500 text-center"></p>
+                    <p class="text-[10px] text-slate-400 mt-2 text-center">Este test es una guía orientativa y no sustituye una asesoría vocacional profesional. Las carreras mencionadas son ejemplos y no corresponden únicamente a la oferta de una institución.</p>
                 </div>
             </div>
         </section>
@@ -1260,96 +1190,284 @@ if (isset($_POST['registrar_aspirante'])) {
                 });
         }
 
-        // ===== TEST VOCACIONAL =====
+        // ===== TEST VOCACIONAL (60 preguntas, modelo de intereses de Holland / RIASEC) =====
+        const VOC_AREAS = {
+            R: {
+                nombre: 'Técnico-Práctica', icono: 'fa-screwdriver-wrench', color: 'bg-orange-600', texto: 'text-orange-700', fondo: 'bg-orange-50 border-orange-200',
+                desc: 'Te gusta lo concreto: construir, reparar, operar equipos y trabajar al aire libre o con las manos.',
+                carreras: ['Ingeniería Civil', 'Ingeniería Mecánica / Mecatrónica', 'Ingeniería Industrial', 'Ingeniería Automotriz', 'Ingeniería Eléctrica y Electrónica', 'Agronomía y Agroindustrias', 'Medicina Veterinaria y Zootecnia', 'Ingeniería Forestal y Ambiental', 'Ingeniería Petrolera, Geología y Minas', 'Aviación y Ciencias Aeronáuticas', 'Energías Renovables'],
+                preguntas: [
+                    'Armar, reparar o desarmar aparatos, máquinas o motores.',
+                    'Trabajar al aire libre, en campo, en una obra o en un taller.',
+                    'Cultivar plantas o cuidar animales.',
+                    'Usar herramientas, equipo pesado o maquinaria.',
+                    'Construir cosas con mis manos (muebles, maquetas, instalaciones).',
+                    'Conducir u operar vehículos, drones o maquinaria especial.',
+                    'Encontrar y resolver fallas eléctricas, mecánicas o de plomería.',
+                    'Practicar deportes o actividades físicas de aventura.',
+                    'Interpretar planos, esquemas o diagramas técnicos.',
+                    'Cuidar el medio ambiente trabajando directamente en la naturaleza.'
+                ]
+            },
+            I: {
+                nombre: 'Científico-Investigadora', icono: 'fa-flask', color: 'bg-sky-700', texto: 'text-sky-800', fondo: 'bg-sky-50 border-sky-200',
+                desc: 'Te mueve la curiosidad: investigar, analizar, experimentar y entender cómo funcionan las cosas.',
+                carreras: ['Medicina', 'Biología y Biotecnología', 'Química y Química Farmacéutica', 'Física y Matemáticas', 'Ciencias de la Computación / Sistemas', 'Ciencia de Datos e Inteligencia Artificial', 'Actuaría', 'Nutrición', 'Optometría y Odontología', 'Geografía y Ciencias de la Tierra', 'Ingeniería Biomédica'],
+                preguntas: [
+                    'Investigar por qué ocurren los fenómenos de la naturaleza.',
+                    'Hacer experimentos en un laboratorio.',
+                    'Resolver problemas de matemáticas o de lógica complejos.',
+                    'Leer artículos o ver documentales de ciencia.',
+                    'Analizar datos y descubrir patrones.',
+                    'Aprender cómo funciona el cuerpo humano y por qué aparecen las enfermedades.',
+                    'Programar o entender cómo funcionan las computadoras y el software.',
+                    'Observar y estudiar plantas, animales o microorganismos.',
+                    'Plantear hipótesis y comprobar si son ciertas.',
+                    'Descubrir soluciones nuevas a problemas científicos o tecnológicos.'
+                ]
+            },
+            A: {
+                nombre: 'Artística-Creativa', icono: 'fa-palette', color: 'bg-fuchsia-700', texto: 'text-fuchsia-800', fondo: 'bg-fuchsia-50 border-fuchsia-200',
+                desc: 'Tienes imaginación y sensibilidad: disfrutas crear, expresarte y darle forma a ideas originales.',
+                carreras: ['Arquitectura', 'Diseño Gráfico y Diseño Industrial', 'Artes Visuales y Plásticas', 'Música y Artes Escénicas', 'Cine, Fotografía y Producción Audiovisual', 'Diseño de Modas y Textil', 'Animación y Diseño de Videojuegos', 'Literatura y Letras', 'Gastronomía', 'Ciencias de la Comunicación', 'Diseño de Interiores'],
+                preguntas: [
+                    'Dibujar, pintar o diseñar.',
+                    'Escribir cuentos, poemas, guiones o canciones.',
+                    'Tocar un instrumento, cantar o componer música.',
+                    'Tomar fotografías o editar videos.',
+                    'Actuar, bailar o presentarme frente a un público.',
+                    'Decorar espacios o combinar colores y estilos.',
+                    'Inventar ideas originales, fuera de lo común.',
+                    'Diseñar ropa, logotipos, páginas web o productos.',
+                    'Visitar museos, teatros o exposiciones.',
+                    'Expresar mis emociones por medio del arte.'
+                ]
+            },
+            S: {
+                nombre: 'Social-Asistencial', icono: 'fa-hand-holding-heart', color: 'bg-emerald-700', texto: 'text-emerald-800', fondo: 'bg-emerald-50 border-emerald-200',
+                desc: 'Disfrutas ayudar, enseñar y acompañar a las personas, y trabajar en equipo por el bienestar de otros.',
+                carreras: ['Psicología', 'Pedagogía y Ciencias de la Educación', 'Enfermería', 'Trabajo Social', 'Medicina', 'Terapia Física y Rehabilitación', 'Nutrición', 'Antropología y Sociología', 'Educación Especial', 'Odontología', 'Desarrollo Comunitario'],
+                preguntas: [
+                    'Ayudar a otras personas a resolver sus problemas personales.',
+                    'Enseñar o explicar cosas a los demás.',
+                    'Cuidar la salud y el bienestar de las personas.',
+                    'Ser voluntario en causas sociales.',
+                    'Escuchar y aconsejar a mis amigos o familiares.',
+                    'Trabajar con niños, adolescentes o adultos mayores.',
+                    'Participar en actividades de apoyo a mi comunidad.',
+                    'Orientar a otros para que tomen buenas decisiones.',
+                    'Defender los derechos de personas o grupos vulnerables.',
+                    'Entender cómo piensan y sienten las personas.'
+                ]
+            },
+            E: {
+                nombre: 'Liderazgo-Emprendedora', icono: 'fa-bullhorn', color: 'bg-rose-700', texto: 'text-rose-800', fondo: 'bg-rose-50 border-rose-200',
+                desc: 'Te gusta dirigir, persuadir, tomar iniciativa y lograr metas ambiciosas, ya sea en negocios, política o gestión.',
+                carreras: ['Administración de Empresas', 'Derecho', 'Mercadotecnia y Publicidad', 'Negocios Internacionales y Comercio Exterior', 'Relaciones Internacionales', 'Ciencias Políticas y Administración Pública', 'Turismo y Hotelería', 'Emprendimiento e Innovación', 'Comunicación y Periodismo', 'Recursos Humanos', 'Ingeniería Industrial y de Negocios'],
+                preguntas: [
+                    'Liderar un equipo o dirigir un proyecto.',
+                    'Iniciar mi propio negocio.',
+                    'Convencer a otros de aceptar mis ideas (negociar, vender).',
+                    'Debatir y defender una postura.',
+                    'Organizar eventos o campañas.',
+                    'Tomar decisiones importantes asumiendo riesgos.',
+                    'Participar en política o en cargos de representación.',
+                    'Hacer contactos y relacionarme con personas influyentes.',
+                    'Competir y alcanzar metas ambiciosas.',
+                    'Hablar en público.'
+                ]
+            },
+            C: {
+                nombre: 'Administrativa-Organizativa', icono: 'fa-calculator', color: 'bg-slate-700', texto: 'text-slate-800', fondo: 'bg-slate-50 border-slate-300',
+                desc: 'Valoras el orden, la precisión y la planeación: te sientes cómodo con números, reglas y procesos bien definidos.',
+                carreras: ['Contaduría Pública', 'Finanzas y Banca', 'Economía', 'Actuaría', 'Administración Pública', 'Auditoría y Fiscal', 'Logística y Cadena de Suministro', 'Informática Administrativa', 'Archivonomía y Gestión Documental', 'Comercio Internacional y Aduanas', 'Estadística'],
+                preguntas: [
+                    'Mantener mis cosas ordenadas y organizadas.',
+                    'Llevar cuentas, presupuestos o registros de gastos.',
+                    'Seguir procedimientos y reglas con precisión.',
+                    'Trabajar con hojas de cálculo y bases de datos.',
+                    'Revisar documentos para detectar errores.',
+                    'Planear y cumplir horarios y calendarios.',
+                    'Archivar, clasificar y administrar información.',
+                    'Trabajar en una oficina con tareas definidas y estables.',
+                    'Calcular costos, impuestos o inversiones.',
+                    'Verificar que se cumplan normas y leyes.'
+                ]
+            }
+        };
+        const VOC_OPCIONES = [
+            { v: 2, t: 'Me gusta' },
+            { v: 1, t: 'Me da igual' },
+            { v: 0, t: 'No me gusta' }
+        ];
+        const VOC_POR_PAGINA = 10;
+        let vocPagina = 0;
+
+        // Preguntas intercaladas (una de cada área por vuelta) para evitar respuestas por inercia
+        const VOC_PREGUNTAS = [];
+        for (let i = 0; i < 10; i++) {
+            Object.keys(VOC_AREAS).forEach(k => VOC_PREGUNTAS.push({ area: k, texto: VOC_AREAS[k].preguntas[i] }));
+        }
+
+        function vocConstruirPreguntas() {
+            const cont = document.getElementById('voc-questions');
+            cont.innerHTML = VOC_PREGUNTAS.map((q, i) => `
+                <div class="voc-q bg-slate-50 p-4 rounded-xl border border-slate-200" data-pagina="${Math.floor(i / VOC_POR_PAGINA)}" data-idx="${i}">
+                    <p class="font-semibold text-slate-800 mb-2">${i + 1}. ${q.texto}</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${VOC_OPCIONES.map(o => `
+                            <label class="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-unp-navy cursor-pointer">
+                                <input type="radio" name="q${i}" value="${o.v}" class="text-unp-burgundy" onchange="actualizarProgresoVocacional()">
+                                <span class="ml-2">${o.t}</span>
+                            </label>`).join('')}
+                    </div>
+                </div>`).join('');
+            vocMostrarPagina();
+        }
+
+        function vocMostrarPagina() {
+            const totalPaginas = Math.ceil(VOC_PREGUNTAS.length / VOC_POR_PAGINA);
+            document.querySelectorAll('.voc-q').forEach(el => {
+                el.classList.toggle('hidden', Number(el.dataset.pagina) !== vocPagina);
+            });
+            document.getElementById('voc-nombre-box').classList.toggle('hidden', vocPagina !== 0);
+            document.getElementById('voc-page-text').textContent = `Parte ${vocPagina + 1} de ${totalPaginas}`;
+            document.getElementById('voc-btn-prev').classList.toggle('hidden', vocPagina === 0);
+            document.getElementById('voc-btn-next').classList.toggle('hidden', vocPagina === totalPaginas - 1);
+            document.getElementById('voc-btn-submit').classList.toggle('hidden', vocPagina !== totalPaginas - 1);
+            document.getElementById('voc-error').classList.add('hidden');
+        }
+
+        function vocPaginaIncompleta(pagina) {
+            // Devuelve el elemento de la primera pregunta sin responder en esa página (o null)
+            const preguntas = document.querySelectorAll(`.voc-q[data-pagina="${pagina}"]`);
+            for (const el of preguntas) {
+                if (!document.querySelector(`input[name="q${el.dataset.idx}"]:checked`)) return el;
+            }
+            return null;
+        }
+
+        function vocMostrarError(msg, el) {
+            const err = document.getElementById('voc-error');
+            err.textContent = msg;
+            err.classList.remove('hidden');
+            if (el) {
+                el.classList.add('border-red-400');
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function vocCambiarPagina(dir) {
+            const totalPaginas = Math.ceil(VOC_PREGUNTAS.length / VOC_POR_PAGINA);
+            if (dir > 0) {
+                if (vocPagina === 0 && !document.getElementById('voc-nombre').value.trim()) {
+                    vocMostrarError('Escribe tu nombre para continuar.', document.getElementById('voc-nombre-box'));
+                    return;
+                }
+                const faltante = vocPaginaIncompleta(vocPagina);
+                if (faltante) {
+                    vocMostrarError('Responde todas las preguntas de esta parte para continuar.', faltante);
+                    return;
+                }
+            }
+            vocPagina = Math.max(0, Math.min(totalPaginas - 1, vocPagina + dir));
+            vocMostrarPagina();
+            document.getElementById('test-vocacional').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function actualizarProgresoVocacional() {
-            const respondidas = new FormData(document.getElementById('form-vocacional'));
-            const n = Array.from(respondidas.keys()).filter(k => k !== 'nombre_aspirante').length;
-            document.getElementById('voc-progress-text').textContent = `${n} de 10`;
-            document.getElementById('voc-progress-bar').style.width = `${n * 10}%`;
+            const n = document.querySelectorAll('#voc-questions input[type="radio"]:checked').length;
+            document.getElementById('voc-progress-text').textContent = `${n} de ${VOC_PREGUNTAS.length} respondidas`;
+            document.getElementById('voc-progress-bar').style.width = `${(n / VOC_PREGUNTAS.length) * 100}%`;
+            // Quita el marcado de error de la pregunta que ya fue contestada
+            document.querySelectorAll('.voc-q.border-red-400').forEach(el => {
+                if (document.querySelector(`input[name="q${el.dataset.idx}"]:checked`)) el.classList.remove('border-red-400');
+            });
         }
 
         function procesarVocacional(e) {
             e.preventDefault();
-            const formData = new FormData(document.getElementById('form-vocacional'));
-            let a = 0, r = 0, count = 0;
-
-            for (let [k, v] of formData.entries()) {
-                if (k === 'nombre_aspirante') continue;
-                count++;
-                if (v === 'a') a += 2;
-                else if (v === 'r') r += 2;
-                else { a += 1; r += 1; } // opción neutral suma a ambas
-            }
-
-            if (count < 10) {
-                alert('Por favor responde las 10 preguntas antes de ver tu resultado.');
+            const nombre = document.getElementById('voc-nombre').value.trim();
+            if (!nombre) {
+                vocPagina = 0; vocMostrarPagina();
+                vocMostrarError('Escribe tu nombre para ver tu resultado.', document.getElementById('voc-nombre-box'));
                 return;
             }
 
-            const max = 20;
-            const pctA = Math.round((a / max) * 100);
-            const pctR = Math.round((r / max) * 100);
-
-            const res = document.getElementById('voc-result');
-            const icon = document.getElementById('voc-result-icon');
-            const title = document.getElementById('voc-result-title');
-            const desc = document.getElementById('voc-result-desc');
-            const btnPlan = document.getElementById('voc-btn-plan');
-
-            let destino;
-            if (a > r) {
-                destino = 'plan-automotriz';
-                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-blue-50 border-blue-200';
-                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-unp-navy';
-                icon.innerHTML = '<i class="fa-solid fa-car"></i>';
-                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-unp-navy';
-                title.textContent = 'Ingeniería en Diseño Automotriz';
-                desc.textContent = 'Tienes perfil creativo y técnico, con gusto por el diseño, la precisión y la movilidad del futuro. Esta carrera te llevará del modelado CAD a vehículos eléctricos y autónomos.';
-                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-unp-navy hover:bg-unp-navyLight';
-            } else if (r > a) {
-                destino = 'plan-renovables';
-                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-emerald-50 border-emerald-200';
-                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-emerald-700';
-                icon.innerHTML = '<i class="fa-solid fa-leaf"></i>';
-                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-emerald-900';
-                title.textContent = 'Ingeniería en Energías Renovables';
-                desc.textContent = 'Te mueve el impacto social y ambiental, y te interesa liderar proyectos de energía limpia a gran escala. Esta carrera te preparará en solar, eólica, hidrógeno y redes inteligentes.';
-                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-emerald-700 hover:bg-emerald-800';
-            } else {
-                destino = 'plan-automotriz';
-                res.className = 'mt-8 p-6 rounded-2xl border text-center bg-amber-50 border-amber-200';
-                icon.className = 'w-14 h-14 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-3 bg-amber-600';
-                icon.innerHTML = '<i class="fa-solid fa-scale-balanced"></i>';
-                title.className = 'text-xl md:text-2xl font-extrabold mt-1 text-amber-900';
-                title.textContent = 'Perfil equilibrado: ambas carreras encajan contigo';
-                desc.textContent = 'Tus intereses se reparten por igual entre movilidad y energía. Revisa los dos planes de estudio y elige el que más te entusiasme; ambos comparten bases en electrificación y baterías.';
-                btnPlan.className = 'font-bold px-5 py-2.5 rounded-xl text-xs shadow transition text-white bg-amber-600 hover:bg-amber-700';
+            // Calcula puntajes por área y verifica que todo esté contestado
+            const puntos = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+            for (let i = 0; i < VOC_PREGUNTAS.length; i++) {
+                const marcada = document.querySelector(`input[name="q${i}"]:checked`);
+                if (!marcada) {
+                    vocPagina = Math.floor(i / VOC_POR_PAGINA); vocMostrarPagina();
+                    vocMostrarError('Aún faltan preguntas por responder.', document.querySelector(`.voc-q[data-idx="${i}"]`));
+                    return;
+                }
+                puntos[VOC_PREGUNTAS[i].area] += Number(marcada.value);
             }
 
-            btnPlan.onclick = () => navigateTo(destino);
+            const maxArea = 20; // 10 preguntas x 2 puntos
+            const orden = Object.keys(puntos).sort((x, y) => puntos[y] - puntos[x]);
+            const top = orden.slice(0, 3);
 
-            // Guardar en la base de datos
+            document.getElementById('voc-result-title').textContent =
+                top.map(k => VOC_AREAS[k].nombre).join(' · ');
+
+            // Tarjetas de las 3 áreas principales
+            document.getElementById('voc-result-cards').innerHTML = top.map((k, idx) => {
+                const a = VOC_AREAS[k];
+                return `
+                <div class="p-5 rounded-2xl border ${a.fondo}">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-11 h-11 ${a.color} text-white rounded-full flex items-center justify-center text-lg shrink-0"><i class="fa-solid ${a.icono}"></i></div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${idx === 0 ? 'Área principal' : (idx === 1 ? 'Segunda área' : 'Tercera área')}</span>
+                            <h4 class="font-extrabold text-base ${a.texto}">${a.nombre}</h4>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-3">${a.desc}</p>
+                    <p class="text-[11px] font-bold text-slate-700 mb-1">Carreras que podrían interesarte:</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${a.carreras.map(c => `<span class="bg-white border border-slate-200 text-slate-700 text-[11px] px-2 py-1 rounded-full">${c}</span>`).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Barras con el puntaje de las 6 áreas
+            document.getElementById('voc-bars').innerHTML = orden.map(k => {
+                const a = VOC_AREAS[k];
+                const pct = Math.round((puntos[k] / maxArea) * 100);
+                return `
+                <div>
+                    <div class="flex justify-between mb-1"><span class="font-semibold text-slate-700">${a.nombre}</span><span class="font-bold ${a.texto}">${pct}%</span></div>
+                    <div class="w-full bg-slate-200 rounded-full h-2"><div class="${a.color} h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div></div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('voc-result').classList.remove('hidden');
+            document.getElementById('voc-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Guardar en la base de datos (tabla test_vocacion)
+            const resumen = top.map(k => `${VOC_AREAS[k].nombre} (${puntos[k]})`).join(' | ');
             const datos = new URLSearchParams();
             datos.append('accion', 'guardar_vocacional');
-            datos.append('nombre_aspirante', formData.get('nombre_aspirante'));
-            datos.append('puntos_automotriz', a);
-            datos.append('puntos_renovables', r);
+            datos.append('nombre_aspirante', nombre);
+            datos.append('resultado_carrera', resumen);
             guardarEnBD(datos, 'voc-save-status', 'Resultado guardado en la base de datos.');
-            document.getElementById('voc-pct-a').textContent = pctA + '%';
-            document.getElementById('voc-pct-r').textContent = pctR + '%';
-            document.getElementById('voc-bar-a').style.width = pctA + '%';
-            document.getElementById('voc-bar-r').style.width = pctR + '%';
-
-            res.classList.remove('hidden');
-            res.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function reiniciarVocacional() {
             document.getElementById('form-vocacional').reset();
             document.getElementById('voc-result').classList.add('hidden');
+            document.querySelectorAll('.voc-q').forEach(el => el.classList.remove('border-red-400'));
+            vocPagina = 0;
+            vocMostrarPagina();
             actualizarProgresoVocacional();
+            document.getElementById('voc-save-status').textContent = '';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        document.addEventListener('DOMContentLoaded', vocConstruirPreguntas);
 
         function procesarEncuesta(e) {
             e.preventDefault();
